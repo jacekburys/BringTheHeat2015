@@ -21,5 +21,5 @@ def getTemperature():
     for j in range(y//2 - 5, y//2 + 5):
       count+=1
       sum+=a[i][j][0]
-  res = sum/count
+  res = f(sum/count)
   return res
