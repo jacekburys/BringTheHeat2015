@@ -1,6 +1,7 @@
 import os
 import time
 import RPi.GPIO as GPIO
+from temp import getTemperature
 
 MAX_FREQUENCY = 5.0
 #distance in cm
@@ -62,6 +63,8 @@ setup()
 
 while(True):
   try:
+    temp = getTemperature()
+    print(temp)
     distance = 10.0
     frequency = getFrequencyFromDistance(distance)
     isBuzzing = (frequency > 1)
