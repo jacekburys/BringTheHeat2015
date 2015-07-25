@@ -17,8 +17,8 @@ duration = 0.5
 
 while(True):
   GPIO.output(buzzPin, GPIO.HIGH)
-  sleep(duration)
+  time.sleep(duration)
   GPIO.output(buzzPin, GPIO.LOW)
-  sleep(period(frequency))
+  time.sleep(period(frequency))
 
   
