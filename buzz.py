@@ -16,9 +16,12 @@ frequency = 1
 duration = 0.5
 
 while(True):
-  GPIO.output(buzzPin, GPIO.HIGH)
-  time.sleep(duration)
-  GPIO.output(buzzPin, GPIO.LOW)
-  time.sleep(period(frequency))
+  try:
+    GPIO.output(buzzPin, GPIO.HIGH)
+    time.sleep(duration)
+    GPIO.output(buzzPin, GPIO.LOW)
+    time.sleep(period(frequency))
+  finally:
+    GPIO.output(buzzPin, GPIO.LOW)
 
   
