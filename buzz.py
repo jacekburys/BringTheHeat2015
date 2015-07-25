@@ -2,7 +2,8 @@ import os
 import time
 import RPi.GPIO as GPIO
 
-MAX_FREQUENCY = 5.0
+MAX_FREQUENCY = 6.0
+MIN_FREQUENCY = 2.0
 #distance in cm
 MAX_DISTANCE = 30.0
 
@@ -14,7 +15,8 @@ ECHO = 24
 
 isBuzzing = False
 
-def setup():
+def pinSetup():
+  print("setup")
   GPIO.setmode(GPIO.BCM)
   GPIO.setwarnings(False)
   GPIO.setup(BUZZ,GPIO.OUT)
@@ -26,10 +28,10 @@ def periodFromFrequency(frequency):
 
 def buzz(frequency):
   period = periodFromFrequency(frequency)
-  #GPIO.output(buzzPin, GPIO.HIGH)
+  GPIO.output(BUZZ, GPIO.HIGH)
   print("buzz")
   time.sleep(period/2.0)
-  #GPIO.output(buzzPin, GPIO.LOW)
+  GPIO.output(BUZZ, GPIO.LOW)
   time.sleep(period/2.0)
 
 def getDistance():
@@ -53,23 +55,21 @@ def getDistance():
 #distance in cm
 def getFrequencyFromDistance(distance):
   if distance > MAX_DISTANCE:
-    return 1
-  return (distance/MAX_DISTANCE)*MAX_FREQUENCY
+    return 0
+  return MIN_FREQUENCY + (MAX_FREQUENCY-MIN_FREQUENCY)*(1 - distance/MAX_DISTANCE)
 
 
-#in miliseconds
+#in seconds
 frequency = 1
-setup()
+pinSetup()
 
 while(True):
   try:
-    distance = 10.0
+    distance = getDistance()
     frequency = getFrequencyFromDistance(distance)
+    print(frequency)
     isBuzzing = (frequency > 1)
     if isBuzzing:
       buzz(frequency)
   except:
     GPIO.cleanup()
-    break
-
-  
