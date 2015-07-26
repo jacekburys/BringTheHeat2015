@@ -70,8 +70,8 @@ def bestSquare(lis, side):
   r = side/2.0
   sum = 0.0
   count = 0
-  for x in range(max(0,mx-r), min(w,mx+r+1)):
-    for y in range(max(0,my-r), min(h,my+r+1)):
+  for x in range(int(max(0,mx-r)), int(min(w,mx+r+1))):
+    for y in range(int(max(0,my-r)), int(min(h,my+r+1))):
       sum += lis[x][y][0]
       count += 1
   return sum/count

@@ -70,11 +70,11 @@ buzzedLastTime = False
 while(True):
   try:
     temp = getTemperature()
-    print("Temp", temp)
+    #print("Temp", temp)
     distance = getDistance()
-    print("Dist", distance)
+    #print("Dist", distance)
     frequency = getFrequencyFromDistance(distance)
-    print("Freq", frequency)
+    #print("Freq", frequency)
     isBuzzing = (frequency > 1) and (temp > TEMP_THRESHOLD)
     if isBuzzing or buzzedLastTime:
       buzz(frequency if isBuzzing else lastFrequency)
