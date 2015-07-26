@@ -1,22 +1,23 @@
 import os
 import time
-import thread
+import threading
 import RPi.GPIO as GPIO
 from temp import getTemperature
 
 # 0 - temp & dist , 1 - dist only
 MODE = 0
 # ranges in cm
-RANGES = [30.0, 100.0, 400.0]
+RANGES = [(10.0,30.0), (30.0,100.0), (50.0,400.0)]
 modeRange = [0, 0]
 MODE_SLEEP_TIME = 1
 
 
-MAX_FREQUENCY = 7.0
-MIN_FREQUENCY = 3.0
+MAX_FREQUENCY = 25.0
+MIN_FREQUENCY = 1.0
 #distance in cm
-MAX_DISTANCE = RANGES[0]
-TEMP_THRESHOLD = 25
+MAX_DISTANCE = RANGES[0][1]
+MIN_DISTANCE =  RANGES[0][0]
+TEMP_THRESHOLD = 5
 
 DIST_UPDATE_PERIOD = 1.0
 
@@ -35,8 +36,8 @@ def setup():
   GPIO.setup(BUZZ,GPIO.OUT)
   GPIO.setup(TRIG,GPIO.OUT)
   GPIO.setup(ECHO,GPIO.IN)
-  GPIO.setup(BUTTON0,GPIO.IN)
-  GPIO.setup(BUTTON1,GPIO.IN)
+  GPIO.setup(BUTTON0,GPIO.IN,pull_up_down = GPIO.PUD_DOWN)
+  GPIO.setup(BUTTON1,GPIO.IN,pull_up_down = GPIO.PUD_DOWN)
 
 def periodFromFrequency(frequency):
   return 1.0/frequency
@@ -77,7 +78,13 @@ def getDistance():
 def getFrequencyFromDistance(distance):
   if distance > MAX_DISTANCE:
     return 1
-  return MIN_FREQUENCY + (MAX_FREQUENCY-MIN_FREQUENCY)*(1 - distance/MAX_DISTANCE)
+  if distance < MIN_DISTANCE:
+    return MAX_FREQUENCY 
+  p1 = 1.0/MIN_FREQUENCY
+  p2 = 1.0/MAX_FREQUENCY
+  period = p2 + (p1-p2)*((distance-MIN_DISTANCE)/(MAX_DISTANCE-MIN_DISTANCE))
+  #return MIN_FREQUENCY + (MAX_FREQUENCY-MIN_FREQUENCY)*(1 - distance/MAX_DISTANCE)
+  return 1.0/period
 
 ### MULTITHREADING
 frequency = 1
@@ -87,11 +94,14 @@ def buzzThreadCycle():
   global frequency
   global temperature
   global MODE
-  buzzerMODE = MODE
+  buzzerMode = MODE
   while True:
+    print "buzz thread"
+    time.sleep(0.2)
     if MODE != buzzerMode:
+      print "mode chage"
       buzzerMode = MODE
-      processModeChange(buzzerMode)
+      #processModeChange(buzzerMode)
     localFreq = frequency
     if (frequency > 1) and (temperature > TEMP_THRESHOLD):
       localFreq = frequency
@@ -108,11 +118,19 @@ def mainThreadCycle():
       temperature = getTemperature()
       #print("Temp", temperature)
       distance = getDistance()
-      #print("Dist", distance)
+      print("Dist", distance)
       frequency = getFrequencyFromDistance(distance)
       #print("Freq", frequency)
       #print(count)
-      #count+=1
+      count+=1
+        
+      changed = updateMode()
+      changed = False
+      if changed:
+        print("Changed to mode", MODE)
+        MAX_DISTANCE = RANGES[modeRange[MODE]][1]
+        MIN_DISTANCE = RANGES[modeRange[MODE]][0]
+        time.sleep(MODE_SLEEP_TIME)
     except Exception as e:
       print(e)
       GPIO.cleanup()
@@ -135,29 +153,29 @@ def isButtonPressed(button):
 # return True if mode changed, False otherwise
 def updateMode():
   global MODE
-  global modeRanges
+  global modeRange
   if isButtonPressed(BUTTON0):
     if MODE == 0:
-      modeRanges[0] = (modeRanges[0]+1) % 3
+      modeRange[0] = (modeRange[0]+1) % 3
     MODE = 0
     return True
   if isButtonPressed(BUTTON1):
     if MODE == 1:
-      modeRanges[1] = (modeRanges[1]+1) % 3
+      modeRange[1] = (modeRange[1]+1) % 3
     MODE = 1
     return True
   return False
 
-def getMaxDistance():
-  return RANGES[modeRanges[MODE]]
+#def getMaxDistance():
+#  return RANGES[modeRange[MODE]][1]
 
-def buttonThreadCycle():
+def modeThreadCycle():
   global MAX_DISTANCE
   while True:
     changed = updateMode()
     if changed:
       print("Changed to mode", MODE)
-      MAX_DISTANCE = RANGES[modeRanges[MODE]]
+      MAX_DISTANCE = RANGES[modeRange[MODE]][1]
       time.sleep(MODE_SLEEP_TIME)
 
       
@@ -181,11 +199,17 @@ def processModeChange(mode):
 setup()
 
 try:
-  thread.start_new_thread(mainThreadCycle, ())
-  thread.start_new_thread(buzzThreadCycle, ())
-  thread.start_new_thread(buttonThreadCycle, ())
+  mainThread = threading.Thread(target = mainThreadCycle)
+  mainThread.daemon = True
+  buzzThread = threading.Thread(target = buzzThreadCycle)
+  buzzThread.daemon = True
+  #modeThread = threading.Thread(target = modeThreadCycle)
+  #modeThread.daemon = True
 except:
   print("Error: unable to start the threads")
+
+mainThread.start()
+buzzThread.start()
 
 while 1:
   try:
