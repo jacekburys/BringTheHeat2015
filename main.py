@@ -1,5 +1,6 @@
 import os
 import time
+import thread
 import RPi.GPIO as GPIO
 from temp import getTemperature
 
@@ -33,6 +34,9 @@ def buzz(frequency):
   GPIO.output(BUZZ, GPIO.HIGH)
   print("buzz")
   time.sleep(period/2.0)
+
+def buzzSleep(frequency):
+  period = periodFromFrequency(frequency)
   GPIO.output(BUZZ, GPIO.LOW)
   time.sleep(period/2.0)
 
@@ -59,32 +63,45 @@ def getFrequencyFromDistance(distance):
     return 1
   return MIN_FREQUENCY + (MAX_FREQUENCY-MIN_FREQUENCY)*(1 - distance/MAX_DISTANCE)
 
-#in miliseconds
+### MULTITHREADING
 frequency = 1
+isBuzzing = False
+
+def buzzThreadCycle():
+  while True:
+    if isBuzzing:
+      buzz(frequency)
+      buzzSleep(frequency)
+
+def mainThreadCycle():
+  count = 1
+  while True:
+    try:
+      temp = getTemperature()
+      print("Temp", temp)
+      distance = getDistance()
+      print("Dist", distance)
+      frequency = getFrequencyFromDistance(distance)
+      print("Freq", frequency)
+      isBuzzing = (frequency > 1) and (temp > TEMP_THRESHOLD)
+      print(count)
+      count+=1
+    except Exception as e:
+      print(e)
+      isBuzzing = False
+      GPIO.cleanup()
+      break
+
+###
+
+#in miliseconds
 setup()
 
-count = 1
-lastFrequency = 1
-buzzedLastTime = False
+try:
+  thread.start_new_thread(mainThreadCycle, (,))
+  thread.start_new_thread(buzzThreaCycle, (,))
+except:
+  print("Error: unable to start the threads")
 
-while(True):
-  try:
-    temp = getTemperature()
-    print("Temp", temp)
-    distance = getDistance()
-    print("Dist", distance)
-    frequency = getFrequencyFromDistance(distance)
-    print("Freq", frequency)
-    isBuzzing = (frequency > 1) and (temp > TEMP_THRESHOLD)
-    if isBuzzing or buzzedLastTime:
-      buzz(frequency if isBuzzing else lastFrequency)
-      buzzedLastTime = isBuzzing
-    print(count)
-    count+=1
-    lastFrequency = frequency
-  except Exception as e:
-    print(e)
-    GPIO.cleanup()
-    break
-
-  
+while 1:
+  pass
