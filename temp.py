@@ -79,8 +79,8 @@ def bestSquare(lis, side):
 
 def getTemperature():
   device = "/dev/spidev0.0"
-  print "before call"
+  #print "before call"
   with Lepton(device) as l:
     a,_ = l.capture()
-  print "after call"
+  #print "after call"
   return f(bestSquare(a, TEMP_SIDE))
